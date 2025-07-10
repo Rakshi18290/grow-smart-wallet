@@ -6,7 +6,7 @@ import { Target, Calendar, TrendingUp, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Goal {
-  id: number;
+  id: string;
   name: string;
   targetAmount: number;
   currentAmount: number;
@@ -16,7 +16,7 @@ interface Goal {
 
 interface GoalsTrackerProps {
   goals: Goal[];
-  onUpdateGoal: (goalId: number, amount: number) => void;
+  onUpdateGoal: (goalId: string, amount: number) => void;
 }
 
 export function GoalsTracker({ goals, onUpdateGoal }: GoalsTrackerProps) {
