@@ -54,7 +54,9 @@ export function DashboardCard({
         )}
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold text-foreground">{value}</div>
+        <div className="text-2xl font-bold text-foreground">
+          {value || value === 0 ? value : "Loading..."}
+        </div>
         {subtitle && (
           <p className="text-xs text-muted-foreground">{subtitle}</p>
         )}
