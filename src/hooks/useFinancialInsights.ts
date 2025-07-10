@@ -1,9 +1,4 @@
-interface FinancialData {
-  totalIncome: number;
-  totalExpenses: number;
-  budgetCategories: any[];
-  goals: any[];
-}
+import type { FinancialData } from "@/types/financial";
 
 interface FinancialInsights {
   savingsRate: number;
