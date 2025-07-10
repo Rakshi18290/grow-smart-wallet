@@ -1,67 +1,36 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Bot } from "lucide-react";
-import { useState } from "react";
-import { useAIResponses } from "@/hooks/useAIResponses";
+import { useChatState } from "@/hooks/useChatState";
+import { useMessageHandler } from "@/hooks/useMessageHandler";
 import { ChatMessages } from "./ChatMessages";
 import { ChatInput } from "./ChatInput";
-
-interface Message {
-  id: number;
-  type: 'user' | 'ai';
-  content: string;
-  timestamp: Date;
-}
+import type { FinancialData } from "@/types/financial";
 
 interface AIAssistantProps {
-  financialData: {
-    totalIncome: number;
-    totalExpenses: number;
-    budgetCategories: any[];
-    goals: any[];
-  };
+  financialData: FinancialData;
 }
 
 export function AIAssistant({ financialData }: AIAssistantProps) {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 1,
-      type: 'ai',
-      content: "Hi! I'm your BudgetBot AI assistant. I can help you with financial advice, budget analysis, and goal planning. What would you like to know?",
-      timestamp: new Date()
-    }
-  ]);
-  const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const {
+    messages,
+    input,
+    setInput,
+    isLoading,
+    addMessage,
+    clearInput,
+    setIsLoading
+  } = useChatState();
 
-  const { generateAIResponse } = useAIResponses(financialData);
+  const { sendMessage } = useMessageHandler({
+    financialData,
+    addMessage,
+    clearInput,
+    setIsLoading
+  });
 
   const handleSendMessage = () => {
-    if (!input.trim()) return;
-
-    const userMessage: Message = {
-      id: Date.now(),
-      type: 'user',
-      content: input,
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-    setInput("");
-    setIsLoading(true);
-
-    // Simulate AI processing time
-    setTimeout(() => {
-      const aiResponse: Message = {
-        id: Date.now() + 1,
-        type: 'ai',
-        content: generateAIResponse(input),
-        timestamp: new Date()
-      };
-
-      setMessages(prev => [...prev, aiResponse]);
-      setIsLoading(false);
-    }, 1000);
+    sendMessage(input);
   };
 
   return (

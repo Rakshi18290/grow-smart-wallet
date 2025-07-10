@@ -1,113 +1,87 @@
-import { useState, useEffect } from "react";
 import { DashboardCard } from "./DashboardCard";
 import { BudgetOverview } from "./BudgetOverview";
 import { QuickActions } from "./QuickActions";
 import { AIAssistant } from "../ai/AIAssistant";
 import { GoalsTracker } from "../goals/GoalsTracker";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { useUserFinancialData } from "@/hooks/useUserFinancialData";
 import { 
   TrendingUp, 
   TrendingDown, 
   Target, 
   Wallet, 
-  PiggyBank,
-  CreditCard,
-  Bot
+  Bot,
+  LogOut,
+  User
 } from "lucide-react";
 
 export function Dashboard() {
-  // Mock data - in a real app, this would come from your backend/state management
-  const [financialData, setFinancialData] = useState({
-    totalIncome: 85000,
-    totalExpenses: 62000,
-    totalSavings: 15000,
-    totalDebt: 120000,
-    transactions: [] as any[],
-    goals: [
-      {
-        id: 1,
-        name: "Emergency Fund",
-        targetAmount: 250000,
-        currentAmount: 65000,
-        deadline: "2024-12-31",
-        description: "6 months of expenses for financial security"
-      },
-      {
-        id: 2,
-        name: "Vacation to Japan",
-        targetAmount: 150000,
-        currentAmount: 42000,
-        deadline: "2024-08-15",
-        description: "Dream trip to Tokyo and Kyoto"
-      },
-      {
-        id: 3,
-        name: "New Laptop",
-        targetAmount: 120000,
-        currentAmount: 95000,
-        deadline: "2024-05-30",
-        description: "MacBook Pro for work and development"
-      }
-    ] as any[]
-  });
+  const { currentUser, userProfile, signOut } = useAuth();
+  const {
+    financialData,
+    budgetCategories,
+    goals,
+    loading,
+    error,
+    addExpense,
+    addIncome,
+    addGoal,
+    updateGoalProgress
+  } = useUserFinancialData();
 
-  const budgetCategories = [
-    {
-      name: "Needs (Housing, Food, Transport)",
-      spent: 42500,
-      budget: 42500, // 50% of income
-      color: "bg-primary"
-    },
-    {
-      name: "Wants (Entertainment, Shopping)",
-      spent: 19500,
-      budget: 25500, // 30% of income
-      color: "bg-warning"
-    },
-    {
-      name: "Savings & Investments",
-      spent: 0,
-      budget: 17000, // 20% of income
-      color: "bg-success"
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Error signing out:', error);
     }
-  ];
-
-  const handleAddExpense = (expense: any) => {
-    setFinancialData(prev => ({
-      ...prev,
-      totalExpenses: prev.totalExpenses + expense.amount,
-      transactions: [...prev.transactions, expense]
-    }));
   };
 
-  const handleAddIncome = (income: any) => {
-    setFinancialData(prev => ({
-      ...prev,
-      totalIncome: prev.totalIncome + income.amount,
-      transactions: [...prev.transactions, income]
-    }));
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading your financial data...</p>
+        </div>
+      </div>
+    );
+  }
 
-  const handleAddGoal = (goal: any) => {
-    setFinancialData(prev => ({
-      ...prev,
-      goals: [...prev.goals, goal]
-    }));
-  };
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-destructive mb-4">Error: {error}</p>
+          <Button onClick={() => window.location.reload()}>Retry</Button>
+        </div>
+      </div>
+    );
+  }
 
-  const handleUpdateGoal = (goalId: number, amount: number) => {
-    setFinancialData(prev => ({
-      ...prev,
-      goals: prev.goals.map(goal => 
-        goal.id === goalId 
-          ? { ...goal, currentAmount: Math.min(goal.currentAmount + amount, goal.targetAmount) }
-          : goal
-      )
-    }));
-  };
+  const totalIncome = financialData?.totalIncome || 0;
+  const totalExpenses = financialData?.totalExpenses || 0;
+  const remainingBudget = totalIncome - totalExpenses;
+  const savingsRate = totalIncome > 0 ? ((remainingBudget) / totalIncome) * 100 : 0;
 
-  const remainingBudget = financialData.totalIncome - financialData.totalExpenses;
-  const savingsRate = ((remainingBudget) / financialData.totalIncome) * 100;
+  // Convert database budget categories to the format expected by components
+  const formattedBudgetCategories = budgetCategories.map(category => ({
+    name: category.name,
+    spent: category.spent,
+    budget: category.budget,
+    color: category.color
+  }));
+
+  // Convert database goals to the format expected by components  
+  const formattedGoals = goals.map(goal => ({
+    id: goal.id,
+    name: goal.name,
+    targetAmount: goal.targetAmount,
+    currentAmount: goal.currentAmount,
+    deadline: goal.deadline,
+    description: goal.description
+  }));
 
   return (
     <div className="min-h-screen bg-background">
@@ -119,16 +93,37 @@ export function Dashboard() {
               <h1 className="text-3xl font-bold text-white">BudgetBot</h1>
               <p className="text-blue-100 mt-1">Your AI-Powered Financial Assistant</p>
             </div>
-            <div className="text-white text-right">
-              <div className="text-sm opacity-90">Welcome back!</div>
-              <div className="text-lg font-semibold">
-                {new Date().toLocaleDateString('en-IN', { 
-                  weekday: 'long', 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
-                })}
+            <div className="flex items-center gap-4 text-white">
+              <div className="text-right">
+                <div className="text-sm opacity-90">Welcome back!</div>
+                <div className="text-lg font-semibold">
+                  {userProfile?.displayName || currentUser?.email || 'User'}
+                </div>
+                <div className="text-sm opacity-75">
+                  {new Date().toLocaleDateString('en-IN', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}
+                </div>
               </div>
+              {userProfile?.photoURL && (
+                <img 
+                  src={userProfile.photoURL} 
+                  alt="Profile" 
+                  className="w-10 h-10 rounded-full border-2 border-white/20"
+                />
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleSignOut}
+                className="text-white hover:bg-white/20"
+                title="Sign Out"
+              >
+                <LogOut className="h-5 w-5" />
+              </Button>
             </div>
           </div>
         </div>
@@ -139,7 +134,7 @@ export function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <DashboardCard
             title="Total Income"
-            value={`₹${financialData.totalIncome.toLocaleString()}`}
+            value={`₹${totalIncome.toLocaleString()}`}
             subtitle="This month"
             icon={<TrendingUp />}
             variant="success"
@@ -147,7 +142,7 @@ export function Dashboard() {
           />
           <DashboardCard
             title="Total Expenses"
-            value={`₹${financialData.totalExpenses.toLocaleString()}`}
+            value={`₹${totalExpenses.toLocaleString()}`}
             subtitle="This month"
             icon={<TrendingDown />}
             variant="destructive"
@@ -162,8 +157,8 @@ export function Dashboard() {
           />
           <DashboardCard
             title="Active Goals"
-            value={financialData.goals.length}
-            subtitle={`₹${financialData.goals.reduce((sum, goal) => sum + goal.targetAmount, 0).toLocaleString()} target`}
+            value={formattedGoals.length}
+            subtitle={`₹${formattedGoals.reduce((sum, goal) => sum + goal.targetAmount, 0).toLocaleString()} target`}
             icon={<Target />}
             variant="default"
           />
@@ -174,19 +169,19 @@ export function Dashboard() {
           {/* Left Column - Budget & Actions */}
           <div className="lg:col-span-2 space-y-8">
             <BudgetOverview 
-              categories={budgetCategories}
-              totalIncome={financialData.totalIncome}
+              categories={formattedBudgetCategories}
+              totalIncome={totalIncome}
             />
             
             <QuickActions
-              onAddExpense={handleAddExpense}
-              onAddIncome={handleAddIncome}
-              onAddGoal={handleAddGoal}
+              onAddExpense={addExpense}
+              onAddIncome={addIncome}
+              onAddGoal={addGoal}
             />
 
             <GoalsTracker 
-              goals={financialData.goals}
-              onUpdateGoal={handleUpdateGoal}
+              goals={formattedGoals}
+              onUpdateGoal={updateGoalProgress}
             />
           </div>
 
@@ -194,10 +189,10 @@ export function Dashboard() {
           <div className="space-y-8">
             <AIAssistant 
               financialData={{
-                totalIncome: financialData.totalIncome,
-                totalExpenses: financialData.totalExpenses,
-                budgetCategories,
-                goals: financialData.goals
+                totalIncome,
+                totalExpenses,
+                budgetCategories: formattedBudgetCategories,
+                goals: formattedGoals
               }}
             />
 
@@ -229,6 +224,14 @@ export function Dashboard() {
                   <div className="p-3 bg-destructive-muted border border-destructive rounded-lg">
                     <p className="text-destructive-foreground">
                       🚨 You're ₹{Math.abs(remainingBudget).toLocaleString()} over budget this month. Review your expenses immediately.
+                    </p>
+                  </div>
+                )}
+
+                {totalIncome === 0 && totalExpenses === 0 && (
+                  <div className="p-3 bg-muted rounded-lg">
+                    <p className="text-muted-foreground">
+                      👋 Welcome to BudgetBot! Start by adding your income and expenses to get personalized insights.
                     </p>
                   </div>
                 )}

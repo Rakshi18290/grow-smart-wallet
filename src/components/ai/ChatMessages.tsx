@@ -1,12 +1,6 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Bot, User } from "lucide-react";
-
-interface Message {
-  id: number;
-  type: 'user' | 'ai';
-  content: string;
-  timestamp: Date;
-}
+import type { Message } from "@/hooks/useChatState";
 
 interface ChatMessagesProps {
   messages: Message[];
